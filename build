@@ -1,0 +1,53 @@
+name: Build with 8 cores
+
+# Khi nào workflow chạy
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    # Chạy trên runner GitHub-hosted
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Lấy code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Cài Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      # 3. Cache npm dependencies để build nhanh hơn
+      - name: Cache npm modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 4. Cài đặt dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # 5. Kiểm tra số CPU
+      - name: Show CPU info
+        run: |
+          echo "CPU Info:"
+          lscpu
+          echo "Logical cores: $(nproc)"
+
+      # 6. Build project sử dụng 8 cores
+      - name: Build project
+        run: |
+          # Nếu npm build script hỗ trợ parallel jobs
+          npm run build --jobs=8
+
+          # Nếu dùng Make: make -j8
+          # Nếu dùng Cargo (Rust): cargo build --jobs 8
